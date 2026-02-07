@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeSmart OAuth Callback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: #2c3e50;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      padding: 40px 30px;
+      max-width: 640px;
+      width: 90%;
+      text-align: center;
+    }
+    h1 {
+      color: #1e40af;
+      margin: 0 0 24px;
+      font-size: 28px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 0 0 20px;
+    }
+    .code-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 24px 0;
+      text-align: left;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 15px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 220px;
+    }
+    button {
+      background: #1e40af;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 12px;
+    }
+    button:hover {
+      background: #1e3a8a;
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    #status {
+      margin-top: 16px;
+      font-weight: 600;
+      color: #15803d;
+      min-height: 24px;
+    }
+    .footer-note {
+      margin-top: 32px;
+      font-size: 14px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OAuth Callback Received</h1>
+    
+    <p>You have been redirected here after approving the application on TradeSmart.</p>
+    <p><strong>Copy the full URL parameters</strong> from the browser address bar (everything after the ? symbol).</p>
+    
+    <div class="code-box" id="paramsBox">
+      Waiting for parameters...
+    </div>
+
+    <button onclick="copyToClipboard()">Copy Parameters</button>
+    <div id="status"></div>
+
+    <div class="footer-note">
+      Paste the copied code into your trading script to complete the authentication process.
+    </div>
+  </div>
+
+  <script>
+    // Get all URL parameters (query + hash)
+    const fullParams = window.location.search + window.location.hash;
+
+    // Display parameters
+    const box = document.getElementById('paramsBox');
+    box.textContent = fullParams.trim() ? fullParams : 'No parameters found in URL';
+
+    function copyToClipboard() {
+      if (!fullParams.trim()) {
+        document.getElementById('status').textContent = 'Nothing to copy';
+        document.getElementById('status').style.color = '#dc2626';
+        return;
+      }
+
+      navigator.clipboard.writeText(fullParams).then(() => {
+        const status = document.getElementById('status');
+        status.textContent = 'Copied successfully!';
+        status.style.color = '#15803d';
+        setTimeout(() => { status.textContent = ''; }, 4000);
+      }).catch(() => {
+        document.getElementById('status').textContent = 'Copy failed — select text manually';
+        document.getElementById('status').style.color = '#dc2626';
+      });
+    }
+  </script>
+</body>
+</html>
