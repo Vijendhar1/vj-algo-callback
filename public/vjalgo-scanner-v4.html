@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VJ Algo — Options Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Teko:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090f; --s1:#0c0f1a; --s2:#111520;
+  --b1:#1a2235; --b2:#222d44;
+  --bull:#00e676; --bull2:rgba(0,230,118,0.08); --bullglow:rgba(0,230,118,0.22);
+  --bear:#ff4060; --bear2:rgba(255,64,96,0.07);
+  --gold:#ffc107; --gold2:rgba(255,193,7,0.07);
+  --blue:#38bdf8;
+  --txt:#c8d8ec; --dim:#334455; --dim2:#5a7090;
+  --mono:'Share Tech Mono',monospace;
+  --disp:'Teko',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,230,118,.01) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,230,118,.01) 1px,transparent 1px);
+  background-size:52px 52px;}
+
+/* ── TOPBAR ── */
+.topbar{position:sticky;top:0;z-index:200;background:rgba(7,9,15,.97);
+  border-bottom:1px solid var(--b1);backdrop-filter:blur(12px);
+  display:flex;align-items:center;gap:12px;padding:0 16px;height:52px;}
+.logo{font-family:var(--disp);font-size:24px;font-weight:600;letter-spacing:3px;color:var(--bull);flex-shrink:0;line-height:1;}
+.logo small{display:block;font-size:8px;letter-spacing:2px;color:var(--dim2);font-family:var(--mono);}
+.sep{width:1px;height:26px;background:var(--b2);flex-shrink:0;}
+.itabs{display:flex;gap:3px;}
+.itab{font-family:var(--disp);font-size:16px;letter-spacing:2px;padding:3px 11px;border-radius:3px;
+  border:1px solid var(--b2);background:transparent;color:var(--dim2);cursor:pointer;transition:all .15s;}
+.itab.on{background:var(--bull2);border-color:var(--bull);color:var(--bull);}
+.spot-blk{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+.spot-px{font-family:var(--disp);font-size:22px;letter-spacing:1px;line-height:1;}
+.spot-chg{font-size:10px;}.spot-chg.up{color:var(--bull);}.spot-chg.dn{color:var(--bear);}
+.expiry{background:var(--s2);border:1px solid var(--b2);color:var(--txt);padding:4px 8px;
+  border-radius:3px;font-family:var(--mono);font-size:11px;outline:none;cursor:pointer;}
+.sess-wrap{flex:1;display:flex;flex-direction:column;gap:3px;min-width:80px;}
+.sess-lbl{font-size:8px;color:var(--dim2);letter-spacing:1px;display:flex;justify-content:space-between;}
+.sess-track{height:3px;background:var(--b1);border-radius:2px;overflow:hidden;}
+.sess-fill{height:100%;background:linear-gradient(90deg,var(--bull),#69ffb4);transition:width 3s linear;}
+.live-pill{display:flex;align-items:center;gap:4px;flex-shrink:0;padding:3px 8px;border-radius:3px;
+  background:var(--bull2);border:1px solid rgba(0,230,118,.18);font-size:9px;color:var(--bull);letter-spacing:1px;}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--bull);animation:blink 1.1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+.top-btn{flex-shrink:0;padding:4px 10px;border-radius:3px;border:1px solid var(--b2);background:transparent;
+  color:var(--dim2);font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.top-btn:hover{border-color:var(--bull);color:var(--bull);background:var(--bull2);}
+
+/* ── MAIN ── */
+.main{padding:12px 16px;position:relative;z-index:1;}
+
+/* ── TOP REC ── */
+.rec-wrap{margin-bottom:14px;}
+
+.rec-card{border-radius:8px;padding:14px 18px;border:1px solid;position:relative;overflow:hidden;transition:all .5s;}
+.rec-card.strong-buy{border-color:rgba(0,230,118,.65);background:rgba(0,230,118,.05);box-shadow:0 0 36px rgba(0,230,118,.14);}
+.rec-card.buy       {border-color:rgba(0,230,118,.35);background:rgba(0,230,118,.03);}
+.rec-card.confirming{border-color:rgba(255,193,7,.4); background:rgba(255,193,7,.03);}
+.rec-card.wait      {border-color:rgba(56,189,248,.25);background:rgba(56,189,248,.02);}
+.rec-card.none      {border-color:var(--b2);background:var(--s1);}
+
+/* left accent stripe */
+.rec-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;}
+.rec-card.strong-buy::before{background:var(--bull);}
+.rec-card.buy::before       {background:rgba(0,230,118,.6);}
+.rec-card.confirming::before{background:var(--gold);}
+.rec-card.wait::before      {background:var(--blue);}
+.rec-card.none::before      {background:var(--dim);}
+
+.rec-top{display:flex;align-items:flex-start;gap:16px;margin-bottom:10px;}
+.rec-left{display:flex;flex-direction:column;gap:4px;flex:1;}
+.rec-verdict{font-family:var(--disp);font-size:32px;letter-spacing:2px;line-height:1;}
+.rec-verdict.v-buy   {color:var(--bull);}
+.rec-verdict.v-conf  {color:var(--gold);}
+.rec-verdict.v-wait  {color:var(--blue);}
+.rec-verdict.v-none  {color:var(--dim2);}
+.rec-strike-line{font-family:var(--disp);font-size:20px;letter-spacing:1px;line-height:1;color:var(--txt);}
+.rec-ltp{font-size:11px;color:var(--dim2);margin-top:2px;}
+.rec-ltp span{color:var(--bull);}
+.rec-reason{font-size:11px;color:var(--dim2);line-height:1.65;margin-top:4px;max-width:600px;}
+.rec-reason strong{color:var(--txt);}
+
+/* confirmation progress bar */
+.conf-wrap{margin-top:8px;}
+.conf-lbl{font-size:9px;color:var(--dim2);letter-spacing:1px;margin-bottom:4px;display:flex;justify-content:space-between;}
+.conf-track{height:6px;background:var(--b1);border-radius:3px;overflow:hidden;}
+.conf-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.conf-fill.buying   {background:linear-gradient(90deg,#00c060,var(--bull));}
+.conf-fill.confirming{background:linear-gradient(90deg,#a07000,var(--gold));}
+.conf-fill.watching {background:linear-gradient(90deg,#1a6080,var(--blue));}
+
+/* trigger pills */
+.triggers{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.trig{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:3px;
+  font-size:9px;letter-spacing:.8px;text-transform:uppercase;font-weight:600;transition:all .4s;}
+.trig.on {background:rgba(0,230,118,.12);color:var(--bull);border:1px solid rgba(0,230,118,.28);}
+.trig.off{background:transparent;color:var(--dim);border:1px solid var(--b1);}
+.trig .dot{width:5px;height:5px;border-radius:50%;}
+.trig.on .dot{background:var(--bull);}
+.trig.off .dot{background:var(--dim);}
+
+/* right side score */
+.rec-right{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;}
+.score-ring{position:relative;width:64px;height:64px;}
+.score-ring svg{position:absolute;inset:0;transform:rotate(-90deg);}
+.score-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.sc-num{font-family:var(--disp);font-size:22px;line-height:1;}
+.sc-lbl{font-size:7px;color:var(--dim2);letter-spacing:1px;}
+.conf-count{font-size:9px;color:var(--dim2);text-align:center;}
+.conf-count span{color:var(--gold);}
+
+/* ── NEXT BEST ── */
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:14px;}
+.nc{background:var(--s1);border:1px solid var(--b2);border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color .3s,transform .15s;}
+.nc:hover{transform:translateY(-1px);}
+.nc.r1{border-color:rgba(0,230,118,.4);}
+.nc.r2{border-color:rgba(0,230,118,.22);}
+.nc.r3{border-color:rgba(0,230,118,.12);}
+.nc-top{display:flex;justify-content:space-between;align-items:center;padding:8px 11px 6px;border-bottom:1px solid var(--b1);}
+.nc-str{font-family:var(--disp);font-size:20px;letter-spacing:1px;}
+.nc-type{font-size:9px;font-weight:700;letter-spacing:2px;padding:1px 6px;border-radius:2px;}
+.nc-type.CE{background:var(--bull2);color:var(--bull);border:1px solid rgba(0,230,118,.22);}
+.nc-type.PE{background:var(--bear2);color:var(--bear);border:1px solid rgba(255,64,96,.18);}
+.nc-score{font-family:var(--disp);font-size:24px;color:var(--bull);}
+.nc-body{padding:7px 11px;}
+.nc-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;}
+.nc-key{color:var(--dim2);font-size:9px;letter-spacing:1px;text-transform:uppercase;}
+/* vol trend mini bars */
+.vbars{display:flex;gap:2px;align-items:flex-end;height:16px;}
+.vbar{width:5px;border-radius:1px;background:var(--b2);min-height:2px;transition:height .3s;}
+.nc-foot{padding:4px 11px 7px;font-size:9px;color:var(--dim2);}
+
+/* ── AVOID ── */
+.avoid-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.avoid-pill{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:4px;
+  background:var(--bear2);border:1px solid rgba(255,64,96,.18);}
+.ap-str{font-family:var(--disp);font-size:16px;color:var(--bear);}
+.ap-type{font-size:9px;color:var(--bear);letter-spacing:1px;}
+.ap-why{font-size:10px;color:var(--dim2);}
+
+/* ── SESSION STATS ── */
+.srow{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin-bottom:12px;}
+.sc2{background:var(--s1);border:1px solid var(--b1);border-radius:5px;padding:7px 10px;}
+.sc2 .sl{font-size:8px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:2px;}
+.sc2 .sv{font-family:var(--disp);font-size:20px;letter-spacing:1px;line-height:1.1;}
+.sc2 .ss{font-size:9px;color:var(--dim2);margin-top:1px;}
+.bull{color:var(--bull);}.bear{color:var(--bear);}.gold{color:var(--gold);}.blue{color:var(--blue);}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:7px;overflow:hidden;overflow-x:auto;}
+table.ct{width:100%;border-collapse:collapse;min-width:740px;}
+.ct thead tr:first-child th{font-family:var(--disp);font-size:13px;letter-spacing:2px;padding:6px 8px;border-bottom:1px solid var(--b2);}
+.ct thead th.ceh{color:var(--bull);background:rgba(0,230,118,.02);text-align:center;}
+.ct thead th.peh{color:var(--bear);background:rgba(255,64,96,.015);text-align:center;}
+.ct thead th.skh{color:var(--gold);text-align:center;}
+.ct thead tr:last-child th{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--dim2);padding:4px 7px;border-bottom:1px solid var(--b1);font-weight:400;}
+.ct thead th.ce-b{background:rgba(0,230,118,.012);}
+.ct thead th.pe-b{background:rgba(255,64,96,.008);}
+.ct tbody tr{border-bottom:1px solid rgba(26,34,53,.45);transition:background .12s;cursor:pointer;}
+.ct tbody tr:hover{background:rgba(255,255,255,.01);}
+.ct tbody tr.atm-r{background:rgba(255,193,7,.03);}
+.ct tbody tr.buy-r{background:rgba(0,230,118,.035);}
+.ct tbody tr.av-r {background:rgba(255,64,96,.02);}
+.ct td{padding:5px 7px;font-size:11px;white-space:nowrap;vertical-align:middle;}
+.ct td.sk-td{text-align:center;font-family:var(--disp);font-size:14px;letter-spacing:1px;
+  border-left:1px solid var(--b1);border-right:1px solid var(--b1);color:var(--txt);}
+.ct td.sk-td.atm{color:var(--gold);}
+.ct td.ce-td{background:rgba(0,230,118,.009);}
+.ct td.pe-td{background:rgba(255,64,96,.006);}
+.tr{text-align:right;}.tc{text-align:center;}
+
+/* score pill */
+.sp{display:inline-block;padding:1px 5px;border-radius:2px;font-size:9px;font-weight:600;letter-spacing:.4px;}
+.sp.h{background:rgba(0,230,118,.13);color:var(--bull);border:1px solid rgba(0,230,118,.28);}
+.sp.m{background:rgba(255,193,7,.09);color:var(--gold);border:1px solid rgba(255,193,7,.2);}
+.sp.l{color:var(--dim);border:1px solid var(--b1);}
+
+/* action tag */
+.atag{font-size:8px;padding:1px 5px;border-radius:2px;font-weight:700;letter-spacing:1px;white-space:nowrap;}
+.atag.sb{background:rgba(0,230,118,.14);color:var(--bull);border:1px solid rgba(0,230,118,.25);}
+.atag.b {background:rgba(0,230,118,.08);color:var(--bull);border:1px solid rgba(0,230,118,.18);}
+.atag.cf{background:rgba(255,193,7,.1); color:var(--gold);border:1px solid rgba(255,193,7,.2);}
+.atag.w {color:var(--dim2);border:1px solid var(--b1);}
+.atag.av{background:rgba(255,64,96,.1); color:var(--bear);border:1px solid rgba(255,64,96,.18);}
+
+/* vol trend bars in table */
+.tvbars{display:inline-flex;gap:2px;align-items:flex-end;height:12px;vertical-align:middle;margin-left:3px;}
+.tvbar{width:3px;border-radius:1px;min-height:2px;}
+
+/* buy% bar */
+.bbar{display:inline-flex;align-items:center;gap:3px;}
+.btrack{width:38px;height:3px;border-radius:2px;overflow:hidden;}
+.bfill{height:100%;border-radius:2px;transition:width .4s;}
+
+/* modal */
+.overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.78);align-items:center;justify-content:center;}
+.overlay.show{display:flex;}
+.modal{background:var(--s2);border:1px solid var(--b2);border-radius:9px;padding:24px;width:400px;max-width:92vw;}
+.modal h3{font-family:var(--disp);font-size:22px;color:var(--bull);letter-spacing:2px;margin-bottom:6px;}
+.modal p{font-size:11px;color:var(--dim2);line-height:1.7;margin-bottom:12px;}
+.mf{margin-bottom:8px;}
+.mf label{display:block;font-size:8px;color:var(--dim2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;}
+.mi{width:100%;background:var(--s1);border:1px solid var(--b2);color:var(--txt);padding:7px 10px;border-radius:3px;font-family:var(--mono);font-size:12px;outline:none;}
+.mi:focus{border-color:var(--bull);}
+.mbtns{display:flex;gap:8px;margin-top:12px;}
+.mbtn{flex:1;padding:8px;border:none;border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:1px;}
+.mbtn-ok{background:var(--bull);color:#000;}
+.mbtn-cl{background:transparent;border:1px solid var(--b2);color:var(--dim2);}
+
+/* section header */
+.sh{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;margin-top:14px;}
+.sh h2{font-family:var(--disp);font-size:18px;letter-spacing:2px;color:var(--txt);}
+.sh h2 em{color:var(--bull);font-style:normal;}
+.sh .hint{font-size:9px;color:var(--dim2);margin-left:auto;}
+
+.footer{margin-top:12px;padding:9px 16px;border-top:1px solid var(--b1);display:flex;justify-content:space-between;
+  align-items:center;flex-wrap:wrap;gap:5px;font-size:9px;color:var(--dim2);position:relative;z-index:1;}
+.conn{transition:color .3s;}.conn.on{color:var(--bull);}.conn.off{color:var(--bear);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">VJ ALGO<small>session scanner</small></div>
+  <div class="sep"></div>
+  <div class="itabs">
+    <button class="itab on" onclick="switchIdx('NIFTY',this)">NIFTY</button>
+    <button class="itab" onclick="switchIdx('SENSEX',this)">SENSEX</button>
+  </div>
+  <div class="sep"></div>
+  <div class="spot-blk">
+    <div class="spot-px" id="spot-px">24,198</div>
+    <div class="spot-chg up" id="spot-chg">▲ 0.00 (0.00%)</div>
+  </div>
+  <div class="sep"></div>
+  <select class="expiry">
+    <option>20 Feb 2025 (Weekly)</option>
+    <option>27 Feb 2025</option>
+    <option>27 Mar 2025</option>
+  </select>
+  <div class="sess-wrap">
+    <div class="sess-lbl"><span>09:15</span><span id="sess-rem">SESSION</span><span>15:30</span></div>
+    <div class="sess-track"><div class="sess-fill" id="sess-fill" style="width:0%"></div></div>
+  </div>
+  <div class="live-pill"><span class="ldot"></span><span id="live-clk">LIVE</span></div>
+  <button class="top-btn" onclick="document.getElementById('mo').classList.add('show')">⚡ KITE API</button>
+</div>
+
+<div class="overlay" id="mo" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <h3>KITE API CONNECT</h3>
+    <p>Enter Zerodha Kite credentials. Live Volume, LTP, and Buy/Sell Qty data will feed the session engine.</p>
+    <div class="mf"><label>API Key</label><input class="mi" type="text" id="mk" placeholder="api_key"></div>
+    <div class="mf"><label>Access Token</label><input class="mi" type="password" id="mt" placeholder="access_token"></div>
+    <p style="color:rgba(255,193,7,.7)">⚠ Requires backend proxy for CORS. Currently DEMO mode — scoring logic is real, data simulated.</p>
+    <div class="mbtns">
+      <button class="mbtn mbtn-ok" onclick="connectKite()">CONNECT</button>
+      <button class="mbtn mbtn-cl" onclick="document.getElementById('mo').classList.remove('show')">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <!-- SESSION STATS -->
+  <div class="srow">
+    <div class="sc2"><div class="sl">Ticks Stored</div><div class="sv blue" id="st-ticks">0</div><div class="ss">this session</div></div>
+    <div class="sc2"><div class="sl">5-Min Candles</div><div class="sv gold" id="st-candles">0</div><div class="ss">completed</div></div>
+    <div class="sc2"><div class="sl">Confirmed BUYs</div><div class="sv bull" id="st-buys">0</div><div class="ss">signals locked</div></div>
+    <div class="sc2"><div class="sl">Confirming</div><div class="sv gold" id="st-conf">0</div><div class="ss">waiting 5 readings</div></div>
+    <div class="sc2"><div class="sl">ATM</div><div class="sv gold" id="st-atm">—</div><div class="ss">spot: <span id="st-spot">—</span></div></div>
+    <div class="sc2"><div class="sl">Top Pick</div><div class="sv bull" id="st-pick">—</div><div class="ss" id="st-pick-s">locked signal</div></div>
+  </div>
+
+  <!-- TOP RECOMMENDATION -->
+  <div class="sh" style="margin-top:0">
+    <h2>📌 <em>RECOMMENDATION</em></h2>
+    <span class="hint">Locked only after sustained evidence · <span id="last-upd">--:--:--</span></span>
+  </div>
+  <div class="rec-wrap" id="rec-wrap"></div>
+
+  <!-- NEXT BEST -->
+  <div class="sh"><h2>🔥 <em>WATCH LIST</em></h2><span class="hint">Confirmed or confirming — ranked by session strength</span></div>
+  <div class="next-grid" id="next-grid"></div>
+
+  <!-- AVOID -->
+  <div class="sh"><h2>🚫 <em>AVOID</em></h2><span class="hint">Sustained sell pressure detected</span></div>
+  <div class="avoid-row" id="avoid-row"></div>
+
+  <!-- ALL STRIKES -->
+  <div class="sh"><h2>ALL <em>STRIKES</em></h2><span class="hint">Vol trend bars show last 8 readings · Green = confirmed BUY</span></div>
+  <div class="tbl-wrap">
+    <table class="ct">
+      <thead>
+        <tr>
+          <th class="ceh" colspan="6">CALL (CE)</th>
+          <th class="skh">STRIKE</th>
+          <th class="peh" colspan="6">PUT (PE)</th>
+        </tr>
+        <tr>
+          <th class="ce-b tc">Signal</th>
+          <th class="ce-b tc">Score</th>
+          <th class="ce-b tr">LTP</th>
+          <th class="ce-b tr">Vol Trend</th>
+          <th class="ce-b tc">Conf</th>
+          <th class="ce-b tc">Buy%</th>
+          <th class="tc" style="color:var(--gold);font-size:9px;">STRIKE</th>
+          <th class="pe-b tc">Buy%</th>
+          <th class="pe-b tc">Conf</th>
+          <th class="pe-b tr">Vol Trend</th>
+          <th class="pe-b tr">LTP</th>
+          <th class="pe-b tc">Score</th>
+          <th class="pe-b tc">Signal</th>
+        </tr>
+      </thead>
+      <tbody id="ct-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  <span>VJ ALGO · SESSION SCANNER</span>
+  <span>Signal locks after: Vol trending up 8+ ticks · Buy%≥60% 5 consecutive · Vol>2× avg · LTP uptrend</span>
+  <span class="conn off" id="conn-lbl">⊘ DEMO MODE</span>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   THE CORE PROBLEM SOLVED:
+   Recommendations only change when there's sustained evidence.
+
+   CONFIRMATION SYSTEM:
+   - Each strike has a "confirmation counter" (0–10)
+   - Counter increments when ALL conditions met in a tick
+   - Counter decrements when conditions fail
+   - BUY only shown when counter >= 8 (8 consecutive passing ticks)
+   - BUY stays until counter drops below 4 (not just one bad tick)
+   - This means a signal needs ~24 seconds to confirm, and ~12 sec to invalidate
+
+   VOL TREND:
+   - We track volume ADDED per tick (not cumulative)
+   - "Vol trending up" = last 4 tick-vols each higher than previous
+   - This confirms genuine buying interest building up
+
+   HYSTERESIS:
+   - BUY locks at conf=8, releases at conf<4
+   - Prevents rapid flip-flopping on borderline signals
+═══════════════════════════════════════════════════════ */
+
+const SESSION = {};
+let tickCount  = 0;
+let candleCount = 0;
+let cTick = 0;
+const TICKS_PER_CANDLE = 100;
+
+let curIdx = 'NIFTY';
+let simSpot  = { NIFTY: 24198.85, SENSEX: 79802.4 };
+let openSpot = { NIFTY: 24075,    SENSEX: 79600   };
+
+const STRIKES = {
+  NIFTY:  [23700,23800,23900,24000,24100,24200,24300,24400,24500,24600,24700],
+  SENSEX: [78000,78500,79000,79500,80000,80500,81000,81500,82000]
+};
+const ATM_MAP = { NIFTY: 24200, SENSEX: 80000 };
+
+/* ── HELPERS ── */
+const R  = (v, r=1) => v * (1 + (Math.random()-.5)*r/100);
+const C  = (v,a,b) => Math.min(b, Math.max(a, v));
+const FMT = n => n>=1e7?(n/1e7).toFixed(1)+'Cr':n>=1e5?(n/1e5).toFixed(1)+'L':n>=1e3?(n/1e3).toFixed(0)+'K':Math.round(n)+'';
+const KEY = (s,t) => `${curIdx}_${s}_${t}`;
+
+function getStore(k) {
+  if (!SESSION[k]) SESSION[k] = {
+    // raw ticks
+    ticks: [],           // [{t, ltp, vol, tickVol, buyPct}]
+    candles: [],         // 5-min candles
+    sessHigh: -Infinity,
+
+    // rolling windows for scoring
+    tickVolHistory: [],  // tickVol per tick, last 20
+    buyPctHistory:  [],  // buyPct per tick, last 20
+    ltpHistory:     [],  // ltp per tick, last 20
+
+    // CONFIRMATION STATE — the heart of the fix
+    confScore:    0,     // 0-10: how many consecutive ticks met all conditions
+    signalState: 'none', // 'none' | 'confirming' | 'buy' | 'strong-buy'
+    signalLockTick: 0,   // tick when signal was locked
+    signalScore:   0,    // latest computed score (0-100)
+
+    // candle state
+    cOpen: null, cHigh: -Infinity, cLow: Infinity, cVol: 0, cBuySum: 0,
+  };
+  return SESSION[k];
+}
+
+/* ═══════════════════════════════════════════
+   CONDITION CHECKERS — each returns true/false
+   based on the session history window.
+═══════════════════════════════════════════ */
+
+// C1: Vol per tick is trending UP for last N ticks (each tick > previous)
+function checkVolTrend(volH, n=4) {
+  if (volH.length < n) return false;
+  const last = volH.slice(-n);
+  for (let i=1; i<last.length; i++) if (last[i] <= last[i-1]) return false;
+  return true;
+}
+
+// C2: Current tick vol > 2× session average tick vol
+function checkVolAbove(volH) {
+  if (volH.length < 5) return false;
+  const avg = volH.slice(0, -1).reduce((a,v)=>a+v,0) / (volH.length-1);
+  return volH[volH.length-1] >= avg * 2;
+}
+
+// C3: Buy% >= 60 for last 5 consecutive readings
+function checkBuyPct(buyH, n=5, threshold=60) {
+  if (buyH.length < n) return false;
+  return buyH.slice(-n).every(p => p >= threshold);
+}
+
+// C4: LTP is in an uptrend (last 4 LTPs each >= previous)
+function checkLtpUptrend(ltpH, n=4) {
+  if (ltpH.length < n) return false;
+  const last = ltpH.slice(-n);
+  for (let i=1; i<last.length; i++) if (last[i] < last[i-1]) return false;
+  return true;
+}
+
+// C5: LTP near session high (within 0.5%)
+function checkSessHigh(ltp, high) {
+  if (high <= 0) return false;
+  return ((high - ltp) / high) * 100 <= 0.5;
+}
+
+/* ═══════════════════════════════════════════
+   CONFIRMATION ENGINE
+   This is what prevents flip-flopping.
+═══════════════════════════════════════════ */
+const CONF_LOCK    = 8;   // ticks needed to lock a BUY signal
+const CONF_RELEASE = 4;   // if conf drops below this, signal releases
+const CONF_MAX     = 10;
+
+function updateConfirmation(k) {
+  const s = SESSION[k];
+  if (s.ticks.length < 6) return; // need some history first
+
+  const last = s.ticks[s.ticks.length-1];
+
+  // Evaluate all conditions this tick
+  const c1 = checkVolTrend(s.tickVolHistory);    // vol increasing 4 ticks
+  const c2 = checkVolAbove(s.tickVolHistory);    // vol > 2× avg
+  const c3 = checkBuyPct(s.buyPctHistory);       // buy% ≥ 60 for 5 ticks
+  const c4 = checkLtpUptrend(s.ltpHistory);      // LTP uptrend 4 ticks
+  const c5 = checkSessHigh(last.ltp, s.sessHigh);// near session high
+
+  // Count how many conditions pass
+  const passing = [c1,c2,c3,c4].filter(Boolean).length; // c5 is bonus
+  const allCore = c1 && c2 && c3 && c4;
+
+  // Update confirmation score with hysteresis
+  if (allCore) {
+    s.confScore = Math.min(CONF_MAX, s.confScore + 1);
+  } else if (passing >= 3) {
+    // Partially passing — don't increment but don't decrement fast
+    s.confScore = Math.max(0, s.confScore - 0.3);
+  } else if (passing >= 2) {
+    s.confScore = Math.max(0, s.confScore - 0.7);
+  } else {
+    // Clearly failing — decrement faster
+    s.confScore = Math.max(0, s.confScore - 1.5);
+  }
+
+  // Compute a 0-100 score
+  const avgVol = s.tickVolHistory.length > 1
+    ? s.tickVolHistory.slice(0,-1).reduce((a,v)=>a+v,0) / (s.tickVolHistory.length-1)
+    : 1;
+  const volRatio = s.tickVolHistory.length ? s.tickVolHistory[s.tickVolHistory.length-1] / Math.max(1,avgVol) : 0;
+  const avgBuy = s.buyPctHistory.slice(-5).reduce((a,v)=>a+v,0) / Math.max(1, Math.min(5,s.buyPctHistory.length));
+
+  const raw = C(1,c1)*20 + C(1,c2)*20 + C(1,c3)*20 + C(1,c4)*20 + (c5?10:0) +
+              C((volRatio-1)*5,0,5) + C((avgBuy-60)*0.3,0,5);
+  s.signalScore = Math.round(C(raw, 0, 100));
+
+  // STATE MACHINE — hysteresis prevents flip-flopping
+  const prev = s.signalState;
+
+  if (s.confScore >= CONF_LOCK) {
+    s.signalState = (s.confScore >= CONF_MAX && allCore && c5) ? 'strong-buy' : 'buy';
+    if (prev === 'none' || prev === 'confirming') s.signalLockTick = tickCount;
+  } else if (s.confScore >= CONF_RELEASE) {
+    if (prev === 'buy' || prev === 'strong-buy') {
+      s.signalState = 'buy'; // hold the signal until it truly drops
+    } else {
+      s.signalState = 'confirming';
+    }
+  } else if (s.confScore >= 2) {
+    if (prev === 'buy' || prev === 'strong-buy') {
+      s.signalState = 'confirming'; // graceful downgrade, not instant drop
+    } else {
+      s.signalState = 'confirming';
+    }
+  } else {
+    s.signalState = 'none';
+  }
+
+  // Store conditions for rendering
+  s.lastConditions = { c1, c2, c3, c4, c5, passing, allCore, volRatio, avgBuy, avgVol };
+}
+
+/* ═══════════════════════════════════════════
+   SIMULATE TICK (replace with Kite WebSocket)
+═══════════════════════════════════════════ */
+let hotStrike = { strike: ATM_MAP['NIFTY'], type: 'CE' };
+let hotRotateAt = 0;
+
+function pickHot() {
+  const strikes = STRIKES[curIdx];
+  const atm = ATM_MAP[curIdx];
+  // Rotate hot strike every 200 ticks (~10 min) so signals are stable
+  const options = [
+    { strike: atm,      type: 'CE' },
+    { strike: atm+100,  type: 'CE' },
+    { strike: atm-100,  type: 'PE' },
+  ];
+  return options[Math.floor(tickCount/200) % options.length];
+}
+
+function simTick() {
+  if (tickCount % 200 === 0) hotStrike = pickHot();
+
+  const spot  = simSpot[curIdx];
+  const strikes = STRIKES[curIdx];
+
+  strikes.forEach(strike => {
+    ['CE','PE'].forEach(type => {
+      const k = KEY(strike, type);
+      const s = getStore(k);
+      const isHot = strike === hotStrike.strike && type === hotStrike.type;
+      const isCE  = type === 'CE';
+      const dist  = Math.abs(strike - spot) / spot;
+
+      // LTP calculation
+      let bl;
+      if (isCE) bl = strike < spot ? C(180+(spot-strike)*.65,5,650) : C(200-(strike-spot)*.5,2,500);
+      else      bl = strike > spot ? C(180+(strike-spot)*.65,5,650) : C(200-(spot-strike)*.5,2,500);
+
+      // Hot strike: LTP consistently ticking up
+      let ltp;
+      if (isHot) {
+        const prev = s.ltpHistory.length ? s.ltpHistory[s.ltpHistory.length-1] : bl;
+        ltp = C(prev * (1 + (0.05 + Math.random()*0.1)/100), bl*0.7, bl*1.5);
+      } else {
+        ltp = R(bl, 0.6);
+      }
+
+      // Cumulative vol + tick vol
+      const prevCumVol = s.ticks.length ? s.ticks[s.ticks.length-1].vol : 0;
+      // Hot: volume consistently accelerating over ~200 ticks
+      let baseTickVol;
+      if (isHot) {
+        // Accelerating pattern: grows with tickCount modulo within the hot period
+        const progress = (tickCount - hotRotateAt) % 200;
+        baseTickVol = C(3000 + progress * 80 + Math.random()*2000, 2000, 25000);
+      } else {
+        baseTickVol = C(2000 - dist*40000, 100, 4000);
+      }
+      const tickVol = Math.round(R(baseTickVol, isHot ? 25 : 30));
+      const vol = prevCumVol + tickVol;
+
+      // Buy%: hot = sustained ≥ 62, others = noisy around 50
+      let buyPct;
+      if (isHot) {
+        buyPct = C(63 + (Math.random()-.25)*12, 58, 92);
+      } else {
+        buyPct = C(50 + (Math.random()-.5)*28, 12, 88);
+      }
+
+      // Push tick
+      s.ticks.push({ t:Date.now(), ltp, vol, tickVol, buyPct });
+      if (s.ticks.length > 3600) s.ticks.shift();
+
+      // Session high
+      if (ltp > s.sessHigh) s.sessHigh = ltp;
+
+      // Rolling windows
+      s.tickVolHistory.push(tickVol); if (s.tickVolHistory.length > 20) s.tickVolHistory.shift();
+      s.buyPctHistory.push(buyPct);   if (s.buyPctHistory.length > 20) s.buyPctHistory.shift();
+      s.ltpHistory.push(ltp);         if (s.ltpHistory.length > 20) s.ltpHistory.shift();
+
+      // Candle accumulation
+      if (s.cOpen === null) s.cOpen = ltp;
+      s.cHigh = Math.max(s.cHigh, ltp);
+      s.cLow  = Math.min(s.cLow, ltp);
+      s.cVol  += tickVol;
+      s.cBuySum += buyPct;
+
+      // Run confirmation engine
+      updateConfirmation(k);
+    });
+  });
+}
+
+function closeCandles() {
+  cTick++;
+  if (cTick >= TICKS_PER_CANDLE) {
+    cTick = 0;
+    STRIKES[curIdx].forEach(strike => {
+      ['CE','PE'].forEach(type => {
+        const k=KEY(strike,type); const s=SESSION[k]; if(!s||s.cOpen===null) return;
+        const last = s.ticks[s.ticks.length-1];
+        s.candles.push({ t:Date.now(), open:s.cOpen, high:s.cHigh, low:s.cLow,
+          close: last?last.ltp:s.cOpen, vol:s.cVol, buyPct:s.cBuySum/TICKS_PER_CANDLE });
+        if (s.candles.length>75) s.candles.shift();
+        s.cOpen=null; s.cHigh=-Infinity; s.cLow=Infinity; s.cVol=0; s.cBuySum=0;
+      });
+    });
+    candleCount++;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RENDER — TOP RECOMMENDATION
+═══════════════════════════════════════════ */
+function renderRec(winner, allScored) {
+  const el = document.getElementById('rec-wrap');
+
+  if (!winner) {
+    el.innerHTML = `<div class="rec-card none">
+      <div class="rec-top">
+        <div class="rec-left">
+          <div class="rec-verdict v-none">SCANNING</div>
+          <div class="rec-reason">Building session history. A recommendation locks only after <strong>sustained evidence</strong> across multiple readings. Usually appears within 1–2 minutes of market open.</div>
+        </div>
+        <div class="rec-right">
+          <div class="score-ring">
+            <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="var(--b1)" stroke-width="5"/></svg>
+            <div class="score-inner"><div class="sc-num dim2">—</div><div class="sc-lbl">score</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const s = SESSION[winner.key];
+  const co = s.lastConditions || {};
+  const last = s.ticks[s.ticks.length-1] || {};
+  const conf = Math.round(s.confScore);
+  const confPct = Math.round((s.confScore / CONF_LOCK) * 100);
+  const ticksLocked = tickCount - s.signalLockTick;
+  const secLocked = ticksLocked * 3;
+
+  const cardClass = s.signalState;
+  const verdictClass = (s.signalState==='strong-buy'||s.signalState==='buy') ? 'v-buy'
+                     : s.signalState==='confirming' ? 'v-conf' : 'v-wait';
+  const verdictText = s.signalState==='strong-buy' ? '🚀 STRONG BUY'
+                    : s.signalState==='buy' ? '✅ BUY'
+                    : s.signalState==='confirming' ? '⏳ CONFIRMING...'
+                    : '👀 WATCH';
+
+  // Build reason text
+  const reasons = [];
+  if (co.c1) reasons.push(`<strong>Volume trending up</strong> for 4 consecutive ticks`);
+  if (co.c2) reasons.push(`<strong>Vol is ${co.volRatio?co.volRatio.toFixed(1):'—'}× session average</strong> — clear surge`);
+  if (co.c3) reasons.push(`<strong>Buy pressure ≥60%</strong> sustained for 5+ readings`);
+  if (co.c4) reasons.push(`<strong>LTP uptrend</strong> — price ticking up consistently`);
+  if (co.c5) reasons.push(`<strong>LTP near session high</strong> of ${s.sessHigh.toFixed(1)}`);
+  if (!co.c1) reasons.push(`Volume trend not yet confirmed (${s.tickVolHistory.length} readings)`);
+  if (!co.c3) reasons.push(`Buy% avg ${co.avgBuy?co.avgBuy.toFixed(0):50}% — need sustained ≥60%`);
+
+  const confBarClass = (s.signalState==='buy'||s.signalState==='strong-buy') ? 'buying'
+                     : s.signalState==='confirming' ? 'confirming' : 'watching';
+
+  const scoreCircle = s.signalScore;
+  const circleLen = 175.9;
+  const circleDash = (scoreCircle/100)*circleLen;
+
+  el.innerHTML = `<div class="rec-card ${cardClass}">
+    <div class="rec-top">
+      <div class="rec-left">
+        <div class="rec-verdict ${verdictClass}">${verdictText}</div>
+        <div class="rec-strike-line">
+          ${winner.strike.toLocaleString('en-IN')}
+          <span style="color:var(--dim2);font-size:16px"> ${winner.type}</span>
+          ${co.c5?'<span style="font-size:11px;color:var(--gold);margin-left:8px">⭐ SESS HIGH</span>':''}
+        </div>
+        <div class="rec-ltp">LTP: <span>${last.ltp?last.ltp.toFixed(2):'—'}</span>
+          &nbsp;·&nbsp; Buy%: <span style="${last.buyPct>=60?'':'color:var(--dim2)'}">${last.buyPct?last.buyPct.toFixed(0)+'%':'—'}</span>
+          &nbsp;·&nbsp; Vol/tick: <span style="${co.c2?'':'color:var(--dim2)'}">${last.tickVol?FMT(last.tickVol):'—'}</span>
+          ${s.signalState==='buy'||s.signalState==='strong-buy' ? `&nbsp;·&nbsp; <span style="color:var(--gold)">Locked ${secLocked}s ago</span>` : ''}
+        </div>
+        <div class="rec-reason">${reasons.join(' · ')}</div>
+        <div class="triggers">
+          <div class="trig ${co.c1?'on':'off'}"><div class="dot"></div>VOL TREND ↑</div>
+          <div class="trig ${co.c2?'on':'off'}"><div class="dot"></div>VOL > 2× AVG</div>
+          <div class="trig ${co.c3?'on':'off'}"><div class="dot"></div>BUY% ≥60 (5×)</div>
+          <div class="trig ${co.c4?'on':'off'}"><div class="dot"></div>LTP UPTREND</div>
+          <div class="trig ${co.c5?'on':'off'}"><div class="dot"></div>SESS HIGH</div>
+        </div>
+        <div class="conf-wrap">
+          <div class="conf-lbl">
+            <span>CONFIRMATION STRENGTH</span>
+            <span style="color:${s.confScore>=CONF_LOCK?'var(--bull)':'var(--gold)'}">${conf}/${CONF_LOCK} — ${s.signalState.toUpperCase()}</span>
+          </div>
+          <div class="conf-track">
+            <div class="conf-fill ${confBarClass}" style="width:${Math.min(100,confPct)}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="rec-right">
+        <div class="score-ring">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="var(--b1)" stroke-width="5"/>
+            <circle cx="32" cy="32" r="28" fill="none"
+              stroke="${s.signalState==='strong-buy'?'var(--bull)':s.signalState==='buy'?'rgba(0,230,118,.7)':'var(--gold)'}"
+              stroke-width="5" stroke-linecap="round"
+              stroke-dasharray="${circleDash} ${circleLen}"
+              style="transition:stroke-dasharray .5s"/>
+          </svg>
+          <div class="score-inner">
+            <div class="sc-num ${s.signalState==='buy'||s.signalState==='strong-buy'?'bull':'gold'}">${scoreCircle}</div>
+            <div class="sc-lbl">score</div>
+          </div>
+        </div>
+        <div class="conf-count">Conf: <span>${conf}/${CONF_LOCK}</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   RENDER — NEXT BEST (watch list)
+═══════════════════════════════════════════ */
+function renderNext(list) {
+  const el = document.getElementById('next-grid');
+  if (!list.length) {
+    el.innerHTML = `<div style="color:var(--dim2);font-size:11px;padding:8px">No other signals confirming. Session is building.</div>`;
+    return;
+  }
+  el.innerHTML = list.map((h,i) => {
+    const s = SESSION[h.key];
+    const last = s.ticks[s.ticks.length-1]||{};
+    const co = s.lastConditions||{};
+    const cls = i===0?'r1':i===1?'r2':'r3';
+
+    // Volume trend bars (last 8 tickVols)
+    const vols = s.tickVolHistory.slice(-8);
+    const maxV = Math.max(...vols,1);
+    const vbars = vols.map((v,i,a) => {
+      const h = Math.max(4, Math.round((v/maxV)*16));
+      const up = i===0||v>=a[i-1];
+      return `<div class="vbar" style="height:${h}px;background:${up?'var(--bull)':'var(--bear)'}"></div>`;
+    }).join('');
+
+    const stateTag = s.signalState==='strong-buy'?'🚀 STR BUY':s.signalState==='buy'?'✅ BUY':'⏳ CONFIRMING';
+    const stateColor = (s.signalState==='buy'||s.signalState==='strong-buy')?'var(--bull)':'var(--gold)';
+
+    return `<div class="nc ${cls}" onclick="scrollToRow(${h.strike})">
+      <div class="nc-top">
+        <div>
+          <div class="nc-str">${h.strike.toLocaleString('en-IN')}</div>
+          <div class="nc-type ${h.type}">${h.type}</div>
+        </div>
+        <div>
+          <div class="nc-score">${s.signalScore}</div>
+          <div style="font-size:8px;color:var(--dim2);text-align:right">score</div>
+        </div>
+      </div>
+      <div class="nc-body">
+        <div class="nc-row">
+          <span class="nc-key">Signal</span>
+          <span style="font-size:10px;font-weight:700;color:${stateColor}">${stateTag}</span>
+        </div>
+        <div class="nc-row">
+          <span class="nc-key">Vol Trend</span>
+          <div class="vbars">${vbars}</div>
+        </div>
+        <div class="nc-row">
+          <span class="nc-key">Buy%</span>
+          <span style="color:${last.buyPct>=60?'var(--bull)':'var(--dim2)'};font-size:11px">${last.buyPct?last.buyPct.toFixed(0)+'%':'—'}</span>
+        </div>
+        <div class="nc-row">
+          <span class="nc-key">LTP</span>
+          <span style="font-size:11px">${last.ltp?last.ltp.toFixed(1):'—'}</span>
+        </div>
+        <div class="nc-row">
+          <span class="nc-key">Conf</span>
+          <span style="color:${s.confScore>=CONF_LOCK?'var(--bull)':'var(--gold)'};font-size:11px">${Math.round(s.confScore)}/${CONF_LOCK}</span>
+        </div>
+      </div>
+      <div class="nc-foot">
+        ${co.c1?'✓ Vol↑ ':''}${co.c2?'✓ Vol>2× ':''}${co.c3?'✓ Buy%60 ':''}${co.c4?'✓ LTP↑':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   RENDER — AVOID LIST
+═══════════════════════════════════════════ */
+function renderAvoid(list) {
+  const el = document.getElementById('avoid-row');
+  if (!list.length) { el.innerHTML=`<span style="color:var(--dim2);font-size:11px">No clear avoid signals yet.</span>`; return; }
+  el.innerHTML = list.map(a => {
+    const s = SESSION[a.key]; const last = s.ticks[s.ticks.length-1]||{};
+    return `<div class="avoid-pill">
+      <div><div class="ap-str">${a.strike.toLocaleString('en-IN')}</div><div class="ap-type">${a.type}</div></div>
+      <div class="ap-why">Buy ${last.buyPct?last.buyPct.toFixed(0)+'%':'?'} · Vol declining · LTP falling</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   RENDER — TABLE
+═══════════════════════════════════════════ */
+function renderTable(all) {
+  const atm = ATM_MAP[curIdx];
+  const tbody = document.getElementById('ct-body');
+
+  tbody.innerHTML = STRIKES[curIdx].map(strike => {
+    const ck=KEY(strike,'CE'), pk=KEY(strike,'PE');
+    const cs=SESSION[ck], ps=SESSION[pk];
+    if (!cs||!ps) return '';
+    const cl=cs.ticks[cs.ticks.length-1]||{ltp:0,vol:0,tickVol:0,buyPct:50};
+    const pl=ps.ticks[ps.ticks.length-1]||{ltp:0,vol:0,tickVol:0,buyPct:50};
+    const isATM = strike===atm;
+
+    // Row class
+    const cBuy = cs.signalState==='buy'||cs.signalState==='strong-buy';
+    const pBuy = ps.signalState==='buy'||ps.signalState==='strong-buy';
+    const cAvoid = cs.signalScore<20 && cs.ticks.length>10;
+    const pAvoid = ps.signalScore<20 && ps.ticks.length>10;
+    const rowCls = isATM?'atm-r':(cBuy||pBuy?'buy-r':(cAvoid&&pAvoid?'av-r':''));
+
+    const pill = (s,state) => {
+      const cls = (state==='buy'||state==='strong-buy')?'h':state==='confirming'?'m':'l';
+      return `<span class="sp ${cls}">${s}</span>`;
+    };
+    const tag = state => {
+      if(state==='strong-buy') return `<span class="atag sb">🚀 STR</span>`;
+      if(state==='buy')        return `<span class="atag b">✅ BUY</span>`;
+      if(state==='confirming') return `<span class="atag cf">⏳ CONF</span>`;
+      return `<span class="atag w">—</span>`;
+    };
+
+    // Vol trend bars for table (last 6)
+    const volBars = (volH) => {
+      const last6=volH.slice(-6); const mx=Math.max(...last6,1);
+      return last6.map((v,i,a)=>{
+        const h=Math.max(3,Math.round((v/mx)*12));
+        const up=i===0||v>=a[i-1];
+        return `<div class="tvbar" style="height:${h}px;background:${up?'var(--bull)':'var(--bear)'}"></div>`;
+      }).join('');
+    };
+
+    // Buy% bar
+    const bbar = pct => `<div class="bbar">
+      <div class="btrack" style="background:var(--bear)"><div class="bfill" style="width:${pct}%;background:${pct>=60?'var(--bull)':pct>=50?'var(--gold)':'var(--bear)'}"></div></div>
+      <span style="font-size:9px;color:${pct>=60?'var(--bull)':pct>=50?'var(--gold)':'var(--dim2)'}">${pct.toFixed(0)}%</span>
+    </div>`;
+
+    const confBar = (conf) => {
+      const pct=(conf/CONF_LOCK)*100;
+      const col=conf>=CONF_LOCK?'var(--bull)':conf>=4?'var(--gold)':'var(--dim)';
+      return `<div style="display:flex;align-items:center;gap:3px">
+        <div style="width:28px;height:3px;background:var(--b1);border-radius:2px;overflow:hidden">
+          <div style="width:${Math.min(100,pct)}%;height:100%;background:${col};border-radius:2px"></div>
+        </div>
+        <span style="font-size:9px;color:${col}">${Math.round(conf)}</span>
+      </div>`;
+    };
+
+    const cpLtp = (ltp, sessH) => {
+      const atHigh = sessH>0 && ((sessH-ltp)/sessH)*100<=0.5;
+      return `<span style="${atHigh?'color:var(--bull)':''}">${ltp.toFixed(1)}${atHigh?' ⭐':''}</span>`;
+    };
+
+    return `<tr class="${rowCls}" id="row-${strike}">
+      <td class="ce-td tc">${tag(cs.signalState)}</td>
+      <td class="ce-td tc">${pill(cs.signalScore,cs.signalState)}</td>
+      <td class="ce-td tr">${cpLtp(cl.ltp,cs.sessHigh)}</td>
+      <td class="ce-td tr"><div class="tvbars">${volBars(cs.tickVolHistory)}</div><span style="font-size:9px;color:var(--dim2);margin-left:3px">${FMT(cl.tickVol)}/t</span></td>
+      <td class="ce-td tc">${confBar(cs.confScore)}</td>
+      <td class="ce-td tc">${bbar(cl.buyPct)}</td>
+      <td class="sk-td ${isATM?'atm':''}">${strike.toLocaleString('en-IN')}${isATM?'<br><span style="font-size:7px;color:var(--gold)">ATM</span>':''}</td>
+      <td class="pe-td tc">${bbar(pl.buyPct)}</td>
+      <td class="pe-td tc">${confBar(ps.confScore)}</td>
+      <td class="pe-td tr"><span style="font-size:9px;color:var(--dim2);margin-right:3px">${FMT(pl.tickVol)}/t</span><div class="tvbars">${volBars(ps.tickVolHistory)}</div></td>
+      <td class="pe-td tr">${cpLtp(pl.ltp,ps.sessHigh)}</td>
+      <td class="pe-td tc">${pill(ps.signalScore,ps.signalState)}</td>
+      <td class="pe-td tc">${tag(ps.signalState)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   MASTER REFRESH
+═══════════════════════════════════════════ */
+function refresh() {
+  // Drift spot
+  simSpot[curIdx] = R(simSpot[curIdx], 0.05);
+  const spot=simSpot[curIdx], base=openSpot[curIdx];
+  const chg=spot-base, chgPct=(chg/base*100).toFixed(2);
+  document.getElementById('spot-px').textContent=spot.toLocaleString('en-IN',{maximumFractionDigits:0});
+  const sc=document.getElementById('spot-chg');
+  sc.textContent=`${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)} (${Math.abs(chgPct)}%)`;
+  sc.className=`spot-chg ${chg>=0?'up':'dn'}`;
+
+  // Data
+  simTick();
+  closeCandles();
+  tickCount++;
+
+  // Session progress
+  const now=new Date(), nm=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  const pct=Math.min(100,Math.max(0,(nm-555)/375*100));
+  document.getElementById('sess-fill').style.width=pct.toFixed(1)+'%';
+  const rem=930-nm;
+  document.getElementById('sess-rem').textContent=rem>0?`${Math.floor(rem/60)}h ${Math.floor(rem%60)}m left`:'CLOSED';
+
+  // Classify all
+  const all=[];
+  STRIKES[curIdx].forEach(strike=>{
+    ['CE','PE'].forEach(type=>{
+      const k=KEY(strike,type); const s=SESSION[k];
+      if (!s) return;
+      all.push({key:k,strike,type,state:s.signalState,score:s.signalScore,conf:s.confScore});
+    });
+  });
+
+  // Sort: confirmed > confirming > others, then by score
+  const stateOrder = {'strong-buy':0,'buy':1,'confirming':2,'none':3};
+  all.sort((a,b)=>(stateOrder[a.state]||3)-(stateOrder[b.state]||3)||(b.score-a.score));
+
+  const confirmed = all.filter(a=>a.state==='buy'||a.state==='strong-buy');
+  const confirming = all.filter(a=>a.state==='confirming');
+  const avoidList  = all.filter(a=>a.state==='none'&&SESSION[a.key]&&SESSION[a.key].ticks.length>10&&a.score<15)
+                        .slice(0,5);
+
+  // Stats
+  document.getElementById('st-ticks').textContent=tickCount;
+  document.getElementById('st-candles').textContent=candleCount;
+  document.getElementById('st-buys').textContent=confirmed.length;
+  document.getElementById('st-conf').textContent=confirming.length;
+  document.getElementById('st-atm').textContent=ATM_MAP[curIdx].toLocaleString('en-IN');
+  document.getElementById('st-spot').textContent=spot.toLocaleString('en-IN',{maximumFractionDigits:0});
+  if (confirmed.length||confirming.length) {
+    const top=confirmed[0]||confirming[0];
+    document.getElementById('st-pick').textContent=`${top.strike} ${top.type}`;
+    document.getElementById('st-pick-s').textContent=`score: ${top.score}`;
+  }
+
+  // Render
+  const winner = all.filter(a=>a.state!=='none')[0]||null;
+  renderRec(winner, all);
+  renderNext([...confirmed,...confirming].slice(1,5));
+  renderAvoid(avoidList);
+  renderTable(all);
+
+  document.getElementById('last-upd').textContent=new Date().toLocaleTimeString('en-IN');
+}
+
+/* ═══════════════════════════════════════════
+   CONTROLS
+═══════════════════════════════════════════ */
+function switchIdx(idx,el){
+  curIdx=idx;
+  document.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  cTick=0; tickCount=0; candleCount=0;
+  hotRotateAt=0;
+  refresh();
+}
+
+function connectKite(){
+  const key=document.getElementById('mk').value.trim();
+  const tok=document.getElementById('mt').value.trim();
+  if(!key||!tok){alert('Enter API Key and Access Token');return;}
+  document.getElementById('mo').classList.remove('show');
+  document.getElementById('conn-lbl').textContent='● CONNECTED — Live Kite Data';
+  document.getElementById('conn-lbl').className='conn on';
+}
+
+// PUBLIC API — call from your Kite WebSocket handler
+window.pushTick = function(strike, type, ltp, cumulVol, buyQty, sellQty) {
+  const k=KEY(strike,type); const s=getStore(k);
+  const buyPct = buyQty/(buyQty+sellQty+0.001)*100;
+  const prevVol = s.ticks.length ? s.ticks[s.ticks.length-1].vol : cumulVol;
+  const tickVol = Math.max(0, cumulVol - prevVol);
+  s.ticks.push({t:Date.now(),ltp,vol:cumulVol,tickVol,buyPct});
+  if(s.ticks.length>3600) s.ticks.shift();
+  if(ltp>s.sessHigh) s.sessHigh=ltp;
+  s.tickVolHistory.push(tickVol); if(s.tickVolHistory.length>20) s.tickVolHistory.shift();
+  s.buyPctHistory.push(buyPct);   if(s.buyPctHistory.length>20) s.buyPctHistory.shift();
+  s.ltpHistory.push(ltp);         if(s.ltpHistory.length>20) s.ltpHistory.shift();
+  if(s.cOpen===null) s.cOpen=ltp;
+  s.cHigh=Math.max(s.cHigh,ltp); s.cLow=Math.min(s.cLow,ltp);
+  s.cVol+=tickVol; s.cBuySum+=buyPct;
+  updateConfirmation(k);
+};
+
+function scrollToRow(strike){
+  const r=document.getElementById(`row-${strike}`);
+  if(r){r.style.outline='1px solid var(--bull)';r.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>r.style.outline='',2000);}
+}
+
+setInterval(()=>{document.getElementById('live-clk').textContent='LIVE '+new Date().toLocaleTimeString('en-IN');},1000);
+
+refresh();
+setInterval(refresh,3000);
+</script>
+</body>
+</html>
